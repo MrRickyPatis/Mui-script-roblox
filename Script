@@ -1,0 +1,62 @@
+-- LocalPlayer reference
+local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- Function to check if a player is facing the local player
+local function isFacingTarget(targetPlayer)
+    local character = player.Character
+    local targetCharacter = targetPlayer.Character
+    
+    if character and targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        local targetHRP = targetCharacter.HumanoidRootPart
+
+        -- Get the direction the target is facing (LookVector) and the vector from the target to the local player
+        local directionToPlayer = (humanoidRootPart.Position - targetHRP.Position).unit
+        local targetLookVector = targetHRP.CFrame.LookVector
+
+        -- Check if the target is facing the player (dot product > 0.7 for facing, tweak as needed)
+        local dotProduct = targetLookVector:Dot(directionToPlayer)
+        return dotProduct > 0.7
+    end
+    return false
+end
+
+-- Function to find players within 20 studs and facing the local player
+local function findFacingPlayer()
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character.HumanoidRootPart
+        for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetHRP = otherPlayer.Character.HumanoidRootPart
+                local distance = (humanoidRootPart.Position - targetHRP.Position).magnitude
+
+                -- Check if the other player is within 20 studs and facing the local player
+                if distance <= 20 and isFacingTarget(otherPlayer) then
+                    return otherPlayer
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Function to teleport behind the player facing the local player
+local function teleportBehindFacingPlayer(facingPlayer)
+    if facingPlayer and facingPlayer.Character and facingPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetHRP = facingPlayer.Character.HumanoidRootPart
+        local offset = targetHRP.CFrame.LookVector * -5 -- Teleport 5 studs behind
+
+        -- Move the local player to the position 5 studs behind and face the target's back
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetHRP.Position + offset, targetHRP.Position)
+    end
+end
+
+-- Continuously check for facing players every frame
+RunService.Stepped:Connect(function()
+    local facingPlayer = findFacingPlayer()
+    if facingPlayer then
+        teleportBehindFacingPlayer(facingPlayer)
+    end
+end)
